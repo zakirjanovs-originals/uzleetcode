@@ -574,6 +574,8 @@ def get_submission_result(submission_id: int, db: Session = Depends(get_db)):
 # --- Root Endpoint ---
 
 @app.get("/", response_class=HTMLResponse)
+def root():
+    return {"status": "ok"}
 async def serve_root():
     """Reads and serves the index.html file."""
     try:
@@ -603,3 +605,4 @@ def get_admin_dashboard_stats(is_admin: bool = Depends(verify_admin_token), db: 
         # ... (solved counts by difficulty) ...
 
     )
+
