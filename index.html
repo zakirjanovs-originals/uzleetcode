@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UzLeetCode - AI Judge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .problem-link {
+            transition: all 0.2s;
+        }
+        .problem-link:hover {
+            background-color: #f1f5f9;
+        }
+        /* Custom colors for Status */
+        .status-Passed { color: #059669; background-color: #d1fae5; border-color: #10b981; }
+        .status-NeedsReview { color: #f59e0b; background-color: #fffbeb; border-color: #f59e0b; }
+        .status-API_KEY_ERROR, .status-API_CALL_FAILED, .status-Failed, .status-SystemError { color: #ef4444; background-color: #fee2e2; border-color: #f87171; }
+
+        /* Custom colors for Difficulty */
+        .difficulty-Easy { color: #10b981; background-color: #d1fae5; }
+        .difficulty-Medium { color: #f59e0b; background-color: #fffbeb; }
+        .difficulty-Hard { color: #ef4444; background-color: #fee2e2; }
+
+        textarea#code-input {
+            font-family: monospace;
+            min-height: 200px;
+            tab-size: 4;
+            -moz-tab-size: 4;
+        }
+        /* Ensure the 50/25/25 layout utilizes the full screen height */
+        #problem-detail-view {
+            height: calc(100vh - 120px); /* Adjust height for header and padding */
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        let currentProblem = null;
+        let allProblemsData = []; // Global storage for all problems
+        let userId = localStorage.getItem('user_id') || null;
+        let username = localStorage.getItem('username') || 'Guest';
+        let adminToken = localStorage.getItem('admin_token') || null; // NEW: Admin Token
+        const ADMIN_UN = 'admin'; // Hardcoded for frontend check
+        const ADMIN_PW = 'adminpass'; // Hardcoded for frontend check
+    </script>
+
+    <header class="bg-white shadow-md p-4 sticky top-0 z-20">
+        <nav class="container mx-auto flex justify-between items-center">
+            <div class="text-2xl font-black text-blue-600 cursor-pointer" onclick="navigateTo('landing')">UzLeetCode</div>
+            <div id="nav-links" class="flex items-center space-x-6">
+                <a href="#" class="text-gray-600 hover:text-blue-600 font-medium transition hidden" id="nav-my-account" onclick="navigateTo('my-account')">My Account</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600 font-medium transition" id="nav-problems" onclick="navigateTo('problems-list')">Problems</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600 font-medium transition hidden" id="nav-admin" onclick="navigateTo('admin-dashboard')">Admin</a> <a href="#" class="text-gray-600 hover:text-blue-600 font-medium transition" onclick="navigateTo('about-us')">About Us</a>
+            </div>
+            <div id="auth-info" class="flex items-center space-x-3">
+                <span class="text-sm font-medium text-gray-700">Welcome, <span id="current-username">Guest</span>!</span>
+                <button id="signup-button-nav" class="px-3 py-1 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition">Sign Up</button>
+                <button id="signin-button-nav" class="px-3 py-1 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Sign In</button>
+                <button id="signout-button-nav" class="px-3 py-1 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition hidden" onclick="handleSignOut()">Sign Out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="p-4 md:p-8 container mx-auto h-full">
+
+        <div id="landing-view" class="view-content flex flex-col items-center justify-center min-h-[80vh] text-center">
+            <h1 class="text-5xl font-extrabold text-gray-900 mb-4">Welcome to UzLeetCode</h1>
+            <p class="text-xl text-gray-600 mb-8">The AI-powered platform for coding challenges and instant critique using the Gemini API.</p>
+            <div class="space-x-4">
+                <button class="px-8 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-xl hover:bg-blue-700 transition" onclick="navigateTo('problems-list')">Start Solving</button>
+                <button class="px-8 py-3 bg-indigo-500 text-white text-lg font-semibold rounded-lg shadow-xl hover:bg-indigo-600 transition" onclick="openAuthModal('signup')">Sign Up Now</button>
+            </div>
+        </div>
+
+        <div id="problems-list-view" class="view-content hidden">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">
+                Coding Problems
+                <button id="cache-button-list" class="float-right text-sm bg-indigo-500 text-white px-3 py-1 rounded-full hover:bg-indigo-600 transition">Cache Problems</button>
+            </h1>
+
+            <div id="problem-filters" class="flex space-x-4 mb-6">
+                <button class="filter-btn px-4 py-2 text-sm font-semibold rounded-lg transition duration-150 bg-blue-600 text-white" data-filter="All">All</button>
+                <button class="filter-btn px-4 py-2 text-sm font-semibold rounded-lg transition duration-150 bg-gray-200 text-gray-700 hover:bg-gray-300" data-filter="Easy">Easy</button>
+                <button class="filter-btn px-4 py-2 text-sm font-semibold rounded-lg transition duration-150 bg-gray-200 text-gray-700 hover:bg-gray-300" data-filter="Medium">Medium</button>
+                <button class="filter-btn px-4 py-2 text-sm font-semibold rounded-lg transition duration-150 bg-gray-200 text-gray-700 hover:bg-gray-300" data-filter="Hard">Hard</button>
+            </div>
+
+            <div id="problem-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <p id="list-loading" class="text-sm text-gray-500 col-span-full">Loading problems...</p>
+            </div>
+        </div>
+
+        <div id="problem-detail-view" class="view-content hidden flex-col">
+            <button onclick="navigateTo('problems-list')" class="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Problems List
+            </button>
+
+            <div class="flex gap-6 h-full">
+                <div class="w-1/2 bg-white p-6 rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
+                    <div id="problem-title" class="text-2xl font-extrabold text-gray-900 mb-2"></div>
+                    <div id="problem-difficulty" class="text-sm font-semibold mb-4"></div>
+                    <div id="problem-content" class="text-gray-600 space-y-4 text-sm flex-grow overflow-y-auto">
+                        <p>Select a problem from the list.</p>
+                    </div>
+                </div>
+
+                <div class="w-1/2 flex flex-col gap-6">
+
+                    <div class="h-1/2 bg-white p-4 rounded-xl shadow-lg flex-grow flex flex-col relative">
+
+                        <div class="relative mb-3 pb-2 border-b">
+                            <h3 class="text-lg font-bold text-gray-800">Your Code (Python)</h3>
+
+                            <button id="judge-button"
+                                class="absolute right-0 top-0 px-4 py-1 bg-green-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-green-700 transition disabled:bg-gray-400"
+                                disabled>
+                                Submit & Judge
+                            </button>
+                        </div>
+                        <textarea id="code-input" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition flex-grow" placeholder="# Enter your Python solution here..."></textarea>
+
+                        <div id="judge-status" class="text-sm font-medium text-gray-500 mt-2 text-right">Sign in to submit code.</div>
+                    </div>
+                    <div class="h-1/2 bg-white p-4 rounded-xl shadow-lg flex-grow overflow-y-auto">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">AI Judge Result</h3>
+                        <div id="judge-result" class="p-2 border rounded-xl hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span id="result-status" class="px-3 py-1 text-sm font-bold rounded-full border"></span>
+                                <span id="result-complexity" class="text-xs text-gray-700"></span>
+                            </div>
+                            <h4 class="text-md font-bold text-gray-800 mb-1">Critique:</h4>
+                            <p id="result-critique" class="text-gray-600 text-sm whitespace-pre-wrap"></p>
+                        </div>
+                        <p id="judge-result-placeholder" class="text-sm text-gray-500 text-center">Submit your code to see the AI judge's critique here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="my-account-view" class="view-content hidden min-h-[80vh]">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">My Account: <span id="account-username"></span></h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-5xl font-extrabold text-blue-600" id="stats-solved-count">0</div>
+                    <div class="text-gray-500 mt-2">Problems Solved (Passed)</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-5xl font-extrabold text-indigo-600" id="stats-total-submissions">0</div>
+                    <div class="text-gray-500 mt-2">Total Submissions</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-2xl font-semibold text-gray-800" id="stats-full-name">N/A</div>
+                    <div class="text-sm font-medium text-gray-500" id="stats-email">N/A</div>
+                    <div class="text-gray-500 mt-2">User Info</div>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Submissions</h2>
+            <div id="recent-submissions-list" class="space-y-3">
+                <p class="text-gray-500" id="submissions-loading">Loading recent submissions...</p>
+            </div>
+        </div>
+
+        <div id="admin-dashboard-view" class="view-content hidden min-h-[80vh]">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">Admin Dashboard</h1>
+
+            <p id="admin-loading" class="text-gray-500 mb-4">Loading statistics...</p>
+            <p id="admin-error" class="text-red-500 mb-4 hidden">Error loading admin stats. Check login and try again.</p>
+
+            <div id="admin-stats-container" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 hidden">
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-5xl font-extrabold text-blue-600" id="admin-stats-total-users">0</div>
+                    <div class="text-gray-500 mt-2">Total Users</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-5xl font-extrabold text-indigo-600" id="admin-stats-total-problems">0</div>
+                    <div class="text-gray-500 mt-2">Total Problems Cached</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-5xl font-extrabold text-green-600" id="admin-stats-solved-problems">0</div>
+                    <div class="text-gray-500 mt-2">Problems Solved (Distinct)</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                    <div class="text-5xl font-extrabold text-gray-700" id="admin-stats-total-submissions">0</div>
+                    <div class="text-gray-500 mt-2">Total Submissions</div>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Solved Problems Breakdown</h2>
+            <div id="admin-breakdown-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 hidden">
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center border-l-4 border-green-500">
+                    <div class="text-4xl font-extrabold text-green-600" id="admin-stats-easy-solved">0</div>
+                    <div class="text-gray-500 mt-2">Easy Problems Solved</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center border-l-4 border-yellow-500">
+                    <div class="text-4xl font-extrabold text-yellow-600" id="admin-stats-medium-solved">0</div>
+                    <div class="text-gray-500 mt-2">Medium Problems Solved</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center border-l-4 border-red-500">
+                    <div class="text-4xl font-extrabold text-red-600" id="admin-stats-hard-solved">0</div>
+                    <div class="text-gray-500 mt-2">Hard Problems Solved</div>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="about-us-view" class="view-content hidden min-h-[80vh] max-w-2xl mx-auto py-12">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-6 border-b pb-3">About UzLeetCode</h1>
+            <p class="text-lg text-gray-700 mb-4">
+                UzLeetCode is an innovative coding platform designed to help developers practice and improve their skills. It leverages the power of the **Gemini API** to provide instant, detailed, and intelligent critiques on user code submissions.
+            </p>
+            <p class="text-lg text-gray-700 mb-8">
+                Unlike traditional platforms that only check against test cases, UzLeetCode's AI Judge provides feedback on logic, time/space complexity, and code quality, acting as a personal, 24/7 coding mentor.
+            </p>
+
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Project Details</h2>
+            <ul class="list-disc list-inside space-y-2 text-gray-600">
+                <li>**Backend Framework:** FastAPI (Python)</li>
+                <li>**Database:** SQLAlchemy (SQLite)</li>
+                <li>**AI Judge:** Gemini 2.5 Flash via Google Generative Language API</li>
+                <li>**Frontend:** Pure HTML/JavaScript with Tailwind CSS</li>
+            </ul>
+
+            <footer class="mt-12 pt-6 border-t border-gray-200">
+                <p class="text-sm text-gray-500 text-center">&copy; All rights reserved UzLeetCode 2025</p>
+            </footer>
+        </div>
+
+    </main>
+
+    <div id="auth-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4 text-gray-800">Sign Up</h3>
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label for="auth-username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="auth-username" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+                </div>
+                <div>
+                    <label for="auth-password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="auth-password" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+                </div>
+                <div id="auth-message" class="text-sm font-medium text-red-500"></div>
+                <div id="auth-switch-link" class="text-right"></div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="close-modal" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                    <button type="submit" id="submit-auth" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-login-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Admin Login</h3>
+            <form id="admin-login-form" class="space-y-4">
+                <div>
+                    <label for="admin-username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="admin-username" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+                </div>
+                <div>
+                    <label for="admin-password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="admin-password" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+                </div>
+                <div id="admin-login-message" class="text-sm font-medium text-red-500"></div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="close-admin-modal" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                    <button type="submit" id="submit-admin-login" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="temp-judge-overlay" class="fixed inset-0 bg-gray-900/75 flex items-center justify-center z-50 hidden transition-opacity duration-300 opacity-0">
+        <div id="temp-judge-box"
+             class="py-3 px-8 text-center text-2xl font-black text-white rounded-xl shadow-2xl transition-all duration-500 opacity-0 scale-90">
+        </div>
+    </div>
+
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // Problem List Elements
+        const problemsListView = document.getElementById('problems-list-view');
+        const problemListContainer = document.getElementById('problem-list-container');
+        const listLoading = document.getElementById('list-loading');
+        const problemFilters = document.getElementById('problem-filters');
+        const cacheButtonList = document.getElementById('cache-button-list');
+
+        // Problem Detail Elements
+        const problemDetailView = document.getElementById('problem-detail-view');
+        const problemTitleDiv = document.getElementById('problem-title');
+        const problemDifficultyDiv = document.getElementById('problem-difficulty');
+        const problemContentDiv = document.getElementById('problem-content');
+        const codeInput = document.getElementById('code-input');
+        const judgeButton = document.getElementById('judge-button');
+        const judgeStatus = document.getElementById('judge-status');
+        const judgeResultDiv = document.getElementById('judge-result');
+        const judgeResultPlaceholder = document.getElementById('judge-result-placeholder');
+        const resultStatus = document.getElementById('result-status');
+        const resultComplexity = document.getElementById('result-complexity');
+        const resultCritique = document.getElementById('result-critique');
+
+        // Full-Screen Alert
+        const tempJudgeOverlay = document.getElementById('temp-judge-overlay');
+        const tempJudgeBox = document.getElementById('temp-judge-box');
+
+        // Nav and Auth Elements
+        const navMyAccount = document.getElementById('nav-my-account');
+        const navProblems = document.getElementById('nav-problems');
+        const navAdmin = document.getElementById('nav-admin'); // NEW
+        const currentUsernameSpan = document.getElementById('current-username');
+        const signupButtonNav = document.getElementById('signup-button-nav');
+        const signinButtonNav = document.getElementById('signin-button-nav');
+        const signoutButtonNav = document.getElementById('signout-button-nav');
+        const authModal = document.getElementById('auth-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const authForm = document.getElementById('auth-form');
+        const authUsernameInput = document.getElementById('auth-username');
+        const authPasswordInput = document.getElementById('auth-password');
+        const authMessageDiv = document.getElementById('auth-message');
+        const closeModalButton = document.getElementById('close-modal');
+        const authSwitchLinkDiv = document.getElementById('auth-switch-link');
+
+        // My Account Elements
+        const accountUsername = document.getElementById('account-username');
+        const statsSolvedCount = document.getElementById('stats-solved-count');
+        const statsTotalSubmissions = document.getElementById('stats-total-submissions');
+        const statsFullName = document.getElementById('stats-full-name');
+        const statsEmail = document.getElementById('stats-email');
+        const recentSubmissionsList = document.getElementById('recent-submissions-list');
+        const submissionsLoading = document.getElementById('submissions-loading');
+
+        // NEW: Admin Modal Elements
+        const adminLoginModal = document.getElementById('admin-login-modal');
+        const adminLoginForm = document.getElementById('admin-login-form');
+        const adminUsernameInput = document.getElementById('admin-username');
+        const adminPasswordInput = document.getElementById('admin-password');
+        const adminLoginMessage = document.getElementById('admin-login-message');
+        const closeAdminModalButton = document.getElementById('close-admin-modal');
+
+        // NEW: Admin Dashboard Elements
+        const adminStatsContainer = document.getElementById('admin-stats-container');
+        const adminBreakdownContainer = document.getElementById('admin-breakdown-container');
+        const adminLoading = document.getElementById('admin-loading');
+        const adminError = document.getElementById('admin-error');
+        const adminStatsTotalUsers = document.getElementById('admin-stats-total-users');
+        const adminStatsTotalProblems = document.getElementById('admin-stats-total-problems');
+        const adminStatsSolvedProblems = document.getElementById('admin-stats-solved-problems');
+        const adminStatsTotalSubmissions = document.getElementById('admin-stats-total-submissions');
+        const adminStatsEasySolved = document.getElementById('admin-stats-easy-solved');
+        const adminStatsMediumSolved = document.getElementById('admin-stats-medium-solved');
+        const adminStatsHardSolved = document.getElementById('admin-stats-hard-solved');
+
+
+        let authMode = 'signup'; // 'signup' or 'signin'
+        let currentFilter = 'All';
+
+        // --- Core UI Functions ---
+
+        function updateAuthUI() {
+            userId = localStorage.getItem('user_id') || null;
+            username = localStorage.getItem('username') || 'Guest';
+            adminToken = localStorage.getItem('admin_token') || null; // NEW
+
+            currentUsernameSpan.textContent = username;
+
+            if (userId) {
+                // Logged in state
+                signupButtonNav.classList.add('hidden');
+                signinButtonNav.classList.add('hidden');
+                signoutButtonNav.classList.remove('hidden');
+                navMyAccount.classList.remove('hidden');
+            } else {
+                // Logged out state
+                signupButtonNav.classList.remove('hidden');
+                signinButtonNav.classList.remove('hidden');
+                signoutButtonNav.classList.add('hidden');
+                navMyAccount.classList.add('hidden');
+            }
+
+            // NEW: Admin Nav Link Visibility
+            if (adminToken) {
+                navAdmin.classList.remove('hidden');
+            } else {
+                navAdmin.classList.add('hidden');
+            }
+
+            setJudgeLoading(false); // Re-evaluate button state
+        }
+
+        function showTempAlert(message, type) {
+            tempJudgeBox.textContent = message;
+
+            // Reset box classes
+            tempJudgeBox.className = 'py-3 px-8 text-center text-2xl font-black text-white rounded-xl shadow-2xl transition-all duration-500';
+
+            // Set colors based on type
+            if (type === 'success') {
+                tempJudgeBox.classList.add('bg-green-600', 'scale-110');
+            } else if (type === 'error') {
+                tempJudgeBox.classList.add('bg-red-600', 'scale-110');
+            } else { // 'loading'
+                tempJudgeBox.classList.add('bg-gray-700', 'scale-100');
+            }
+
+            // Show Overlay and Box
+            tempJudgeOverlay.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                tempJudgeOverlay.classList.remove('opacity-0');
+                tempJudgeBox.classList.remove('opacity-0', 'scale-90');
+            });
+
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    tempJudgeOverlay.classList.add('opacity-0');
+                    tempJudgeBox.classList.add('opacity-0', 'scale-90');
+
+                    setTimeout(() => {
+                        tempJudgeOverlay.classList.add('hidden');
+                    }, 500);
+                }, 1500);
+            }
+        }
+
+        function setJudgeLoading(isLoading, message = 'Processing...') {
+            const buttonText = isLoading ? message : 'Submit & Judge';
+            judgeButton.textContent = buttonText;
+
+            // Judge is disabled if loading, no problem is selected, or user is not logged in
+            judgeButton.disabled = isLoading || !currentProblem || !userId;
+
+            // Reset status class and set content
+            judgeStatus.className = 'text-sm font-medium text-gray-500 mt-2 text-right';
+
+            if (isLoading) {
+                judgeResultDiv.classList.add('hidden');
+                judgeResultPlaceholder.classList.remove('hidden');
+            } else {
+                if (!userId) {
+                    judgeStatus.textContent = 'Sign in to submit code.';
+                } else if (!currentProblem) {
+                    judgeStatus.textContent = 'Select a problem to begin.';
+                } else {
+                    judgeStatus.textContent = '';
+                }
+            }
+        }
+
+        function showJudgeMessage(type, message) {
+            judgeStatus.className = `text-sm font-medium mt-2 text-right ${type === 'error' ? 'text-red-500' : 'text-green-600'}`;
+            judgeStatus.textContent = message;
+        }
+
+        function getDifficultyColor(difficulty) {
+            const lower = difficulty.toLowerCase();
+            if (lower === 'easy') return 'green';
+            if (lower === 'medium') return 'amber';
+            if (lower === 'hard') return 'red';
+            return 'gray';
+        }
+
+        function showView(viewId) {
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.classList.add('hidden');
+                if (view.id === 'problem-detail-view') {
+                    view.classList.remove('flex-col');
+                }
+            });
+
+            const targetView = document.getElementById(viewId + '-view');
+            if (targetView) {
+                targetView.classList.remove('hidden');
+
+                if (viewId === 'problem-detail') {
+                    targetView.classList.add('flex-col');
+                }
+
+                if (viewId === 'problems-list') {
+                    fetchProblemList();
+                } else if (viewId === 'my-account') {
+                    if (userId) {
+                        fetchAccountStats(username);
+                    } else {
+                        navigateTo('landing');
+                    }
+                } else if (viewId === 'admin-dashboard') { // NEW: Admin Dashboard View Handler
+                    if (adminToken) {
+                        fetchAdminStats();
+                    } else {
+                        openAdminLoginModal();
+                    }
+                }
+            }
+        }
+
+        function navigateTo(viewId) {
+            if (viewId === 'my-account' && !userId) {
+                openAuthModal('signin');
+                return;
+            }
+            showView(viewId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+
+        // --- Auth Logic (Standard User) ---
+
+        function openAuthModal(mode) {
+            authMode = mode;
+            modalTitle.textContent = mode === 'signup' ? 'Sign Up' : 'Sign In';
+            authMessageDiv.textContent = '';
+            authPasswordInput.value = '';
+            authModal.classList.remove('hidden');
+
+            if (mode === 'signup') {
+                authSwitchLinkDiv.innerHTML = '<button type="button" class="text-sm font-medium text-blue-600 hover:text-blue-700" onclick="openAuthModal(\'signin\')">Already have an account?</button>';
+            } else {
+                authSwitchLinkDiv.innerHTML = '<button type="button" class="text-sm font-medium text-blue-600 hover:text-blue-700" onclick="openAuthModal(\'signup\')">Register</button>';
+            }
+        }
+
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            authMessageDiv.textContent = '';
+
+            const inputUsername = authUsernameInput.value;
+            const password = authPasswordInput.value;
+            const endpoint = authMode === 'signup' ? `${API_BASE}/signup` : `${API_BASE}/signin`;
+            let body = null;
+            let headers = {};
+
+            if (authMode === 'signin') {
+                body = new URLSearchParams({
+                    username: inputUsername,
+                    password: password
+                });
+                headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            } else {
+                 body = JSON.stringify({
+                    username: inputUsername,
+                    password: password
+                });
+                headers = { 'Content-Type': 'application/json' };
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: headers,
+                    body: body
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    authMessageDiv.textContent = result.detail || 'Authentication failed.';
+                    return;
+                }
+
+                if (authMode === 'signin') {
+                    userId = result.user_id;
+                    username = result.username;
+                    localStorage.setItem('user_id', userId);
+                    localStorage.setItem('username', username);
+                    authModal.classList.add('hidden');
+                    updateAuthUI();
+                    navigateTo('my-account');
+                } else {
+                    authMessageDiv.textContent = 'Success! You can now sign in.';
+                    setTimeout(() => openAuthModal('signin'), 1500);
+                }
+
+            } catch (error) {
+                authMessageDiv.textContent = `Error: Could not connect to the server.`;
+            }
+        }
+
+        function handleSignOut() {
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('username');
+            // Check if admin is signed out, if so, also sign out admin
+            if (adminToken) {
+                localStorage.removeItem('admin_token');
+            }
+            userId = null;
+            username = 'Guest';
+            adminToken = null;
+            updateAuthUI();
+            navigateTo('landing');
+            showJudgeMessage('info', 'You have been signed out.');
+        }
+
+
+        // --- NEW: Admin Auth Logic ---
+
+        function openAdminLoginModal() {
+            adminLoginMessage.textContent = '';
+            adminPasswordInput.value = '';
+            adminLoginModal.classList.remove('hidden');
+        }
+
+        function handleAdminLogin(event) {
+            event.preventDefault();
+            adminLoginMessage.textContent = '';
+
+            const inputUsername = adminUsernameInput.value;
+            const password = adminPasswordInput.value;
+
+            // Simple client-side check against hardcoded credentials
+            if (inputUsername === ADMIN_UN && password === ADMIN_PW) {
+                adminToken = 'supersecrettoken123'; // Matches the hardcoded backend token
+                localStorage.setItem('admin_token', adminToken);
+                adminLoginModal.classList.add('hidden');
+                updateAuthUI();
+                navigateTo('admin-dashboard');
+            } else {
+                adminLoginMessage.textContent = 'Invalid admin credentials.';
+            }
+        }
+
+        // --- NEW: Admin Stats Fetching ---
+
+        async function fetchAdminStats() {
+            if (!adminToken) {
+                navigateTo('landing'); // Should be handled by navigateTo, but as fallback
+                return;
+            }
+
+            adminLoading.classList.remove('hidden');
+            adminError.classList.add('hidden');
+            adminStatsContainer.classList.add('hidden');
+            adminBreakdownContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/stats?admin_token=${adminToken}`);
+
+                if (response.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    adminToken = null;
+                    updateAuthUI();
+                    alert('Admin session expired. Please log in again.');
+                    openAdminLoginModal();
+                    return;
+                }
+
+                if (!response.ok) throw new Error('Failed to fetch admin statistics.');
+
+                const stats = await response.json();
+
+                adminStatsTotalUsers.textContent = stats.total_users;
+                adminStatsTotalProblems.textContent = stats.total_problems;
+                adminStatsSolvedProblems.textContent = stats.problems_solved_count;
+                adminStatsTotalSubmissions.textContent = stats.total_submissions;
+                adminStatsEasySolved.textContent = stats.easy_solved_count;
+                adminStatsMediumSolved.textContent = stats.medium_solved_count;
+                adminStatsHardSolved.textContent = stats.hard_solved_count;
+
+                adminStatsContainer.classList.remove('hidden');
+                adminBreakdownContainer.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error fetching admin stats:", error);
+                adminError.classList.remove('hidden');
+            } finally {
+                adminLoading.classList.add('hidden');
+            }
+        }
+
+
+        // --- Problems List & Filter Logic ---
+
+        async function fetchProblemList() {
+            listLoading.classList.remove('hidden');
+            problemListContainer.innerHTML = '';
+            try {
+                const response = await fetch(`${API_BASE}/problems/`);
+                if (!response.ok) throw new Error('Failed to fetch problem list.');
+                const categorizedProblems = await response.json();
+
+                // Flatten and store all problems
+                allProblemsData = [].concat(
+                    categorizedProblems['Easy'] || [],
+                    categorizedProblems['Medium'] || [],
+                    categorizedProblems['Hard'] || []
+                );
+
+                filterProblems(currentFilter); // Render with current filter
+            } catch (error) {
+                console.error("Error fetching problem list:", error);
+                problemListContainer.innerHTML = '<p class="text-sm text-red-500 col-span-full">Error loading problems. Run "Cache" first!</p>';
+            } finally {
+                listLoading.classList.add('hidden');
+            }
+        }
+
+        function filterProblems(difficulty) {
+            currentFilter = difficulty;
+            problemListContainer.innerHTML = '';
+
+            // Update filter button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === difficulty) {
+                    btn.className = 'filter-btn px-4 py-2 text-sm font-semibold rounded-lg transition duration-150 bg-blue-600 text-white';
+                } else {
+                    btn.className = 'filter-btn px-4 py-2 text-sm font-semibold rounded-lg transition duration-150 bg-gray-200 text-gray-700 hover:bg-gray-300';
+                }
+            });
+
+            const filteredProblems = difficulty === 'All'
+                ? allProblemsData
+                : allProblemsData.filter(p => p.difficulty === difficulty);
+
+            if (filteredProblems.length === 0) {
+                problemListContainer.innerHTML = `<p class="text-sm text-gray-500 col-span-full">No ${difficulty === 'All' ? '' : difficulty} problems found. Use the **Cache** button if the list is empty.</p>`;
+                return;
+            }
+
+            // Reverse the array to display problems from the earliest (first) to the latest (end)
+            filteredProblems.slice().reverse().forEach(p => {
+                problemListContainer.appendChild(renderProblemLink(p));
+            });
+        }
+
+        async function cacheProblems() {
+            if (!userId) {
+                showJudgeMessage('error', 'Please sign in to cache problems.');
+                openAuthModal('signin');
+                return;
+            }
+
+            cacheButtonList.disabled = true;
+            cacheButtonList.textContent = 'Caching... (Wait up to 10s)';
+
+            try {
+                const response = await fetch(`${API_BASE}/cache-problems`, { method: 'POST' });
+                const result = await response.json();
+
+                if (!response.ok) throw new Error(result.message || 'Caching failed.');
+
+                const message = `Caching successful! ${result.message} Total problems: ${result.total_cached}.`;
+                alert(message); // Use alert for simplicity in this dev environment
+
+                await fetchProblemList(); // Refresh list
+
+            } catch (error) {
+                console.error("Caching error:", error);
+                alert(`Caching failed: ${error.message}`);
+            } finally {
+                cacheButtonList.disabled = false;
+                cacheButtonList.textContent = 'Cache Problems';
+            }
+        }
+
+        // --- Individual Problem Logic ---
+
+        async function selectProblem(slug) {
+            // AUTHENTICATION CHECK: If not signed in, block problem view and prompt sign-in
+            if (!userId) {
+                showJudgeMessage('error', 'Please sign in to view and attempt problems.');
+                openAuthModal('signup');
+                return;
+            }
+
+            // 1. Navigate to the detail view first
+            navigateTo('problem-detail');
+            setJudgeLoading(true, 'Loading Problem...');
+            judgeResultDiv.classList.add('hidden');
+            judgeResultPlaceholder.classList.remove('hidden');
+
+            problemTitleDiv.textContent = 'Loading...';
+            problemContentDiv.innerHTML = '<p>Loading problem content...</p>';
+            codeInput.value = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/problem/${slug}`);
+                if (!response.ok) throw new Error('Failed to fetch problem details.');
+                const problem = await response.json();
+
+                currentProblem = { slug: slug, content: problem.content, title: problem.title };
+
+                problemTitleDiv.textContent = problem.title;
+
+                const diffColor = getDifficultyColor(problem.difficulty);
+                problemDifficultyDiv.textContent = `Difficulty: ${problem.difficulty}`;
+                problemDifficultyDiv.className = `text-sm font-semibold mb-4 text-${diffColor}-600`;
+
+                // Render content (HTML from LeetCode is often complex, rendering raw HTML)
+                problemContentDiv.innerHTML = problem.content;
+
+                // Set default code snippet if available
+                codeInput.value = problem.default_code || `# Enter your Python solution here...`;
+
+                setJudgeLoading(false); // Re-enable judge button
+
+            } catch (error) {
+                console.error("Error fetching problem details:", error);
+                problemTitleDiv.textContent = 'Error loading details';
+                problemContentDiv.innerHTML = '<p class="text-red-500">Could not load problem details. Content may not have been cached yet.</p>';
+                currentProblem = null;
+                setJudgeLoading(false);
+            }
+        }
+
+        async function submitForJudgment() {
+            if (!userId) {
+                openAuthModal('signin');
+                return;
+            }
+            if (!currentProblem || !codeInput.value) {
+                showJudgeMessage('error', 'Please select a problem and enter code.');
+                return;
+            }
+
+            // 1. Show immediate loading alert and status message
+            showTempAlert('Submitting...', 'loading');
+            setJudgeLoading(true, 'Judging...');
+
+            const submissionPayload = {
+                code: codeInput.value,
+                problem: currentProblem.slug
+            };
+
+            const maxRetries = 3;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const judgeResponse = await fetch(`${API_BASE}/api/submit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(submissionPayload)
+                    });
+
+                    if (!judgeResponse.ok) {
+                        if (judgeResponse.status === 429 && attempt < maxRetries - 1) {
+                            const delay = Math.pow(2, attempt) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                        const errorDetails = await judgeResponse.json();
+                        throw new Error(`HTTP Error ${judgeResponse.status}: ${errorDetails.detail || judgeResponse.statusText}`);
+                    }
+
+                    const result = await judgeResponse.json();
+
+                    // 2. Determine temporary alert message based on analysis status
+                    const finalStatus = result.analysis.status;
+                    let alertType = 'error';
+                    let alertMessage = 'Failed';
+
+                    if (finalStatus.toLowerCase().includes('pass')) {
+                        alertType = 'success';
+                        alertMessage = 'Accepted';
+                    } else if (finalStatus.toLowerCase().includes('fail') || finalStatus.toLowerCase().includes('error')) {
+                        alertType = 'error';
+                        alertMessage = 'Failed';
+                    } else { // Needs Review, etc. - treat as a failure for the brief alert
+                        alertType = 'error';
+                        alertMessage = 'Needs Review';
+                    }
+
+                    // Show temporary alert for a moment
+                    showTempAlert(alertMessage, alertType);
+
+                    // Display final detailed result
+                    renderJudgeResult(result.analysis);
+                    showJudgeMessage('success', `Analysis complete. Submission ID: ${result.submission_id}`);
+                    setJudgeLoading(false);
+                    return;
+
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed:`, error);
+                    if (attempt === maxRetries - 1) {
+                        showJudgeMessage('error', `Submission failed: ${error.message}`);
+                        renderJudgeResult({
+                            status: error.message.includes("401") ? 'API_KEY_ERROR' : 'API_CALL_FAILED',
+                            timeComplexity: 'Unknown',
+                            spaceComplexity: 'Unknown',
+                            critique: `Could not reach the AI Judge service or an unexpected error occurred: ${error.message}`
+                        });
+
+                        // Show temporary failure alert
+                        showTempAlert('System Error', 'error');
+                    }
+                } finally {
+                    if (attempt === maxRetries - 1) {
+                        setJudgeLoading(false);
+                    }
+                }
+            }
+        }
+
+        // --- Render Logic ---
+
+        function renderProblemLink(p) {
+            const diffColor = getDifficultyColor(p.difficulty);
+            const link = document.createElement('div');
+            link.className = 'problem-link p-4 bg-white rounded-lg shadow cursor-pointer border border-gray-200';
+            link.onclick = () => selectProblem(p.slug);
+
+            link.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <h4 class="text-md font-semibold text-gray-800">${p.title}</h4>
+                    <span class="difficulty-tag text-xs font-bold rounded-full px-3 py-0.5 ml-2 difficulty-${p.difficulty}">
+                        ${p.difficulty}
+                    </span>
+                </div>
+            `;
+            return link;
+        }
+
+        function renderSubmission(submission) {
+            const item = document.createElement('div');
+            // Remove spaces from status for class matching (e.g., 'API_CALL_FAILED')
+            const statusClass = `status-${submission.status.replace(/\s/g, '')}`;
+
+            item.className = 'p-3 bg-white rounded-lg shadow-sm border border-gray-200 flex justify-between items-center';
+            item.innerHTML = `
+                <div>
+                    <span class="text-sm font-semibold text-gray-800">${submission.problem_slug}</span>
+                    <div class="text-xs text-gray-500">Submitted: ${new Date(submission.created_at).toLocaleString()}</div>
+                </div>
+                <div class="px-3 py-1 text-xs font-bold rounded-full border ${statusClass}">
+                    ${submission.status}
+                </div>
+            `;
+            item.onclick = () => alert('Full submission details feature coming soon!'); // Placeholder for detail view
+            return item;
+        }
+
+        function renderJudgeResult(result) {
+            judgeResultPlaceholder.classList.add('hidden');
+            judgeResultDiv.classList.remove('hidden');
+
+            // Clear existing status classes
+            resultStatus.className = 'px-3 py-1 text-sm font-bold rounded-full border transition duration-300';
+
+            // Set new status class
+            const statusClass = `status-${result.status.replace(/\s/g, '')}`;
+            resultStatus.classList.add(statusClass);
+
+            resultStatus.textContent = result.status;
+            resultComplexity.textContent = `Time: ${result.timeComplexity} | Space: ${result.spaceComplexity}`;
+            resultCritique.textContent = result.critique;
+        }
+
+        // --- My Account Logic (Unchanged) ---
+
+        async function fetchAccountStats(username) {
+            accountUsername.textContent = username;
+            submissionsLoading.classList.remove('hidden');
+            recentSubmissionsList.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/my-account-stats/${username}`);
+                if (!response.ok) throw new Error('Failed to fetch account stats.');
+                const data = await response.json();
+
+                statsSolvedCount.textContent = data.solved_count;
+                statsTotalSubmissions.textContent = data.total_submissions;
+                statsFullName.textContent = data.full_name || 'N/A';
+                statsEmail.textContent = data.email || 'N/A';
+
+                recentSubmissionsList.innerHTML = ''; // Clear loading message
+                if (data.recent_submissions && data.recent_submissions.length > 0) {
+                    data.recent_submissions.forEach(sub => {
+                        recentSubmissionsList.appendChild(renderSubmission(sub));
+                    });
+                } else {
+                    recentSubmissionsList.innerHTML = '<p class="text-gray-500">No submissions yet.</p>';
+                }
+
+            } catch (error) {
+                console.error("Error fetching account stats:", error);
+                recentSubmissionsList.innerHTML = '<p class="text-red-500">Error loading account data.</p>';
+            } finally {
+                submissionsLoading.classList.add('hidden');
+            }
+        }
+
+
+        // --- Initialization and Event Listeners ---
+
+        // Initial UI update
+        updateAuthUI();
+        navigateTo('landing'); // Start at landing view by default
+
+        // Event Listeners
+        judgeButton.addEventListener('click', submitForJudgment); // Handler moved here from inline HTML
+        problemFilters.addEventListener('click', (event) => {
+            if (event.target.classList.contains('filter-btn')) {
+                filterProblems(event.target.dataset.filter);
+            }
+        });
+        cacheButtonList.addEventListener('click', cacheProblems);
+
+        // Auth Listeners
+        signupButtonNav.addEventListener('click', () => openAuthModal('signup'));
+        signinButtonNav.addEventListener('click', () => openAuthModal('signin'));
+        signoutButtonNav.addEventListener('click', handleSignOut);
+        closeModalButton.addEventListener('click', () => authModal.classList.add('hidden'));
+        authForm.addEventListener('submit', handleAuthSubmit);
+
+        // NEW: Admin Listeners
+        closeAdminModalButton.addEventListener('click', () => adminLoginModal.classList.add('hidden'));
+        adminLoginForm.addEventListener('submit', handleAdminLogin);
+
+        // Final state setup based on auth status
+        setJudgeLoading(false);
+
+    </script>
+</body>
+</html>
