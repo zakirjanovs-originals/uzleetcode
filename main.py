@@ -574,19 +574,16 @@ def get_submission_result(submission_id: int, db: Session = Depends(get_db)):
 # --- Root Endpoint ---
 
 @app.get("/", response_class=HTMLResponse)
-def root():
-    return {"status": "ok"}
-async def serve_root():
-    """Reads and serves the index.html file."""
+async def root():
     try:
         with open("index.html", "r", encoding="utf-8") as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content, status_code=200)
+            return HTMLResponse(content=f.read(), status_code=200)
     except FileNotFoundError:
         return HTMLResponse(
-            content="<h1>Frontend file (index.html) not found.</h1><p>Please ensure 'index.html' is in the same directory as 'main.py'.</p>",
+            content="<h1>index.html not found</h1>",
             status_code=404
         )
+
 
 # --- Admin Dashboard Endpoint ---
 @app.get("/api/admin/stats", response_model=AdminStatsResponse, tags=["admin"])
@@ -605,4 +602,5 @@ def get_admin_dashboard_stats(is_admin: bool = Depends(verify_admin_token), db: 
         # ... (solved counts by difficulty) ...
 
     )
+
 
