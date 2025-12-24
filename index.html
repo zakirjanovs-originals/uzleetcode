@@ -34,9 +34,7 @@
             -moz-tab-size: 4;
         }
         /* Ensure the 50/25/25 layout utilizes the full screen height */
-        #problem-detail-view {
-            height: calc(100vh - 120px); /* Adjust height for header and padding */
-        }
+        
     </style>
 </head>
 <body>
@@ -98,60 +96,108 @@
         </div>
 
         <div id="problem-detail-view" class="view-content hidden flex-col">
-            <button onclick="navigateTo('problems-list')" class="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Back to Problems List
-            </button>
 
-            <div class="flex flex-col h-full">
+    <button onclick="navigateTo('problems-list')"
+        class="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+             viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Back to Problems List
+    </button>
 
-  <div class="mb-4">
-    <div id="problem-title" class="text-2xl font-extrabold mb-2"></div>
-    <div id="problem-difficulty" class="text-sm font-semibold"></div>
-  </div>
+    <!-- MAIN RESPONSIVE SPLIT -->
+    <div class="flex flex-col lg:flex-row gap-4 lg:gap-6 h-full">
 
-  <div id="problem-content"
-       class="text-gray-600 space-y-4 text-sm overflow-y-auto pr-2 flex-grow">
-  </div>
+        <!-- LEFT: PROBLEM -->
+        <div class="w-full lg:w-1/2 bg-white p-4 lg:p-6 rounded-xl shadow-lg
+            flex flex-col max-h-[75vh] overflow-hidden">
 
-</div>
+            <div class="mb-4">
+                <div id="problem-title"
+                     class="text-2xl font-extrabold mb-2"></div>
+                <div id="problem-difficulty"
+                     class="text-sm font-semibold"></div>
+            </div>
 
+            <div id="problem-content"
+         class="text-gray-600 space-y-4 text-sm overflow-y-auto pr-2 flex-grow">
+        </div>
+        </div>
 
+        <!-- RIGHT: CODE + RESULT -->
+        <div class="w-full lg:w-1/2 flex flex-col gap-4 lg:gap-6">
+
+            <!-- CODE EDITOR -->
+            <div class="bg-white p-4 rounded-xl shadow-lg flex flex-col
+                        min-h-[320px] lg:h-1/2 relative">
+
+                <div class="relative mb-3 pb-2 border-b">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        Your Code (Python)
+                    </h3>
+
+                    <button id="judge-button"
+                        class="static lg:absolute lg:right-0 lg:top-0
+                               w-full lg:w-auto px-4 py-2
+                               bg-green-600 text-white font-semibold text-sm
+                               rounded-lg shadow-md hover:bg-green-700 transition
+                               disabled:bg-gray-400 mt-2 lg:mt-0"
+                        disabled>
+                        Submit & Judge
+                    </button>
                 </div>
 
-                <div class="w-full lg:w-1/2 flex flex-col gap-6">
+                <textarea id="code-input"
+                    class="w-full p-2 border border-gray-300 rounded-lg
+                           focus:ring-blue-500 focus:border-blue-500
+                           transition flex-grow"
+                    placeholder="# Enter your Python solution here...">
+                </textarea>
 
-                    <div class="h-auto lg:h-1/2 bg-white p-4 rounded-xl shadow-lg flex-grow flex flex-col relative">
-
-                        <div class="relative mb-3 pb-2 border-b">
-                            <h3 class="text-lg font-bold text-gray-800">Your Code (Python)</h3>
-
-                            <button id="judge-button"
-                                class="static lg:absolute lg:right-0 lg:top-0 w-full lg:w-auto px-4 py-2 bg-green-600 text-white font-semibold text-sm rounded-lg shadow-md hover:bg-green-700 transition disabled:bg-gray-400 mt-2 lg:mt-0"
-                                disabled>
-
-                                Submit & Judge
-                            </button>
-                        </div>
-                        <textarea id="code-input" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition flex-grow" placeholder="# Enter your Python solution here..."></textarea>
-
-                        <div id="judge-status" class="text-sm font-medium text-gray-500 mt-2 text-right">Sign in to submit code.</div>
-                    </div>
-                    <div class="h-1/2 bg-white p-4 rounded-xl shadow-lg flex-grow overflow-y-auto">
-                        <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">AI Judge Result</h3>
-                        <div id="judge-result" class="p-2 border rounded-xl hidden">
-                            <div class="flex items-center justify-between mb-2">
-                                <span id="result-status" class="px-3 py-1 text-sm font-bold rounded-full border"></span>
-                                <span id="result-complexity" class="text-xs text-gray-700"></span>
-                            </div>
-                            <h4 class="text-md font-bold text-gray-800 mb-1">Critique:</h4>
-                            <p id="result-critique" class="text-gray-600 text-sm whitespace-pre-wrap"></p>
-                        </div>
-                        <p id="judge-result-placeholder" class="text-sm text-gray-500 text-center">Submit your code to see the AI judge's critique here.</p>
-                    </div>
+                <div id="judge-status"
+                     class="text-sm font-medium text-gray-500 mt-2 text-right">
+                    Sign in to submit code.
                 </div>
             </div>
+
+            <!-- AI RESULT -->
+            <div class="bg-white p-4 rounded-xl shadow-lg
+                        max-h-[35vh] lg:h-1/2 overflow-y-auto">
+
+                <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">
+                    AI Judge Result
+                </h3>
+
+                <div id="judge-result"
+                     class="p-2 border rounded-xl hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span id="result-status"
+                              class="px-3 py-1 text-sm font-bold rounded-full border">
+                        </span>
+                        <span id="result-complexity"
+                              class="text-xs text-gray-700">
+                        </span>
+                    </div>
+
+                    <h4 class="text-md font-bold text-gray-800 mb-1">
+                        Critique:
+                    </h4>
+                    <p id="result-critique"
+                       class="text-gray-600 text-sm whitespace-pre-wrap">
+                    </p>
+                </div>
+
+                <p id="judge-result-placeholder"
+                   class="text-sm text-gray-500 text-center">
+                    Submit your code to see the AI judge's critique here.
+                </p>
+            </div>
+
         </div>
+    </div>
+</div>
 
         <div id="my-account-view" class="view-content hidden min-h-[80vh]">
             <h1 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">My Account: <span id="account-username"></span></h1>
