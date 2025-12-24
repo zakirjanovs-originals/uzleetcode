@@ -206,7 +206,10 @@ def translate_to_uzbek(text: str) -> str:
     Runs once and saved into DB.
     """
     try:
-        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAm18yg6Op5MJPxtxRbmMesno2Fq3_DN44").strip()
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY is not set")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         payload = {
@@ -598,4 +601,5 @@ def get_admin_dashboard_stats(is_admin: bool = Depends(verify_admin_token), db: 
         total_problems=total_problems or 0,
         total_submissions=total_submissions or 0,
         # ... (solved counts by difficulty) ...
+
     )
