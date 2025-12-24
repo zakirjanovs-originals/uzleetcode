@@ -17,10 +17,10 @@ MODEL_NAME = "gemini-2.5-flash"
 # CRITICAL FIX 2: Load API key cleanly and use the placeholder
 # The .strip() ensures no quotes or whitespace are included, which were causing the 400 Bad Request.
 # NOTE: You MUST replace this placeholder with your actual key for the judge to work.
-GEMINI_API_KEY = os.getenv(
-    "GEMINI_API_KEY",
-    "AIzaSyCaB1qe8Bnuq3TnCqAybAhnTQ3S0gnyZsE"
-).strip().strip('"').strip("'")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is not set")
 
 
 # ---------------------------
@@ -138,4 +138,5 @@ async def judge_code(submission: SubmissionModel):
         raise HTTPException(
             status_code=500,
             detail=f"AI Judge failed to produce a valid analysis: {critique_detail}"
+
         )
