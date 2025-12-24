@@ -570,6 +570,20 @@ def get_submission_result(submission_id: int, db: Session = Depends(get_db)):
         "analysis": json.loads(submission.analysis_json) if submission.analysis_json else {}
     }
 
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/__debug/db")
+def download_db():
+    db_path = "uzleetcode.db"  # must match your DATABASE_URL
+    if not os.path.exists(db_path):
+        return {"error": "Database file not found"}
+    return FileResponse(
+        path=db_path,
+        filename="uzleetcode.db",
+        media_type="application/octet-stream"
+    )
+
 
 # --- Root Endpoint ---
 
@@ -602,5 +616,6 @@ def get_admin_dashboard_stats(is_admin: bool = Depends(verify_admin_token), db: 
         # ... (solved counts by difficulty) ...
 
     )
+
 
 
